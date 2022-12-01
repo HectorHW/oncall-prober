@@ -2,7 +2,7 @@
 
 import sys
 import logging
-from typing import Callable
+from typing import Callable, Optional
 import requests
 import signal
 import time
@@ -121,13 +121,13 @@ class FallibleActionIndicator(Indicator):
                  slo: int,
                  is_bad_cond: Callable[[int, int], bool],
                  pretty_name: str = None,
-                 missing_value=0) -> None:
+                 missing_value: Optional[int] = None) -> None:
         self.db = db
         self.prom = prom
         self.value_name = value_name
         self.slo = slo
         self._is_bad = is_bad_cond
-        self.missing_value = missing_value
+        self.missing_value = missing_value if missing_value is not None else slo * 2
         self.pretty_name = pretty_name or value_name
 
     def record(self, timestamp: float):
@@ -153,13 +153,13 @@ class TimeLimitIndicator(Indicator):
                  prom: PrometheusRequest,
                  value_name: str,
                  limit: int,
-                 pretty_name: str = None, missing_value: int = 2000) -> None:
+                 pretty_name: str = None, missing_value: Optional[int] = None) -> None:
         self.db = db
         self.prom = prom
         self.value_name = value_name
         self.limit = limit
         self.pretty_name = pretty_name or self.value_name
-        self.missing_value = missing_value
+        self.missing_value = missing_value if missing_value is not None else limit * 2
 
     def record(self, timestamp: float):
         unixtimestamp = int(timestamp)
