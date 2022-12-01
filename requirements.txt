@@ -1,3 +1,4 @@
 environs
 prometheus-client
 requests
+mysql-connector-python

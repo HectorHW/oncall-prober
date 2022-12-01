@@ -1,0 +1,26 @@
+services:
+  checker:
+    build:
+      dockerfile: checker.dockerfile
+      context: .
+
+    restart: unless-stopped
+    environment:
+      - PROMETHEUS_API_URL=${PROMETHEUS_API_URL:?error}
+      - SCRAPE_INTERVAL=60
+      - MYSQL_HOST=database
+      - MYSQL_PASS=${MYSQL_ROOT_PASSWORD:-1234}
+    depends_on:
+      - database
+
+  database:
+    image: mysql:latest
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-1234}
+    volumes:
+      - my-data:/var/lib/mysql
+    ports:
+      - 127.0.0.1:33066:3306 #database is only exposed to host's localhost
+volumes:
+  my-data:
