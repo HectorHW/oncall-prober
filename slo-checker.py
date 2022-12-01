@@ -194,24 +194,24 @@ def main():
     indicators = [
 
         FallibleActionIndicator(
-            db, prom, 'increase(prober_load_frontpage_scenario_total{status="fail"}[1m])', 0, operator.gt, pretty_name="prober_load_frontpage_scenario_success", missing_value=100),
+            db, prom, 'increase(prober_load_frontpage_scenario_total{status="fail"}[1m])', 0, operator.gt, pretty_name="prober_load_frontpage_scenario_success", missing_value=0),
         TimeLimitIndicator(
             db, prom, 'prober_load_frontpage_scenario_duration_milliseconds', 2000, missing_value=10000
         ),
 
         FallibleActionIndicator(
-            db, prom, 'increase(prober_create_user_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=100,
+            db, prom, 'increase(prober_create_user_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=0,
             pretty_name="prober_create_user_scenario_success"),
         TimeLimitIndicator(
             db, prom, "prober_create_user_scenario_duration_milliseconds", 100),
 
         FallibleActionIndicator(
-            db, prom, 'increase(prober_create_team_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=100, pretty_name="prober_create_team_scenario_success"),
+            db, prom, 'increase(prober_create_team_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=0, pretty_name="prober_create_team_scenario_success"),
         TimeLimitIndicator(
             db, prom, "prober_create_team_scenario_duration_milliseconds", 200),
 
         FallibleActionIndicator(
-            db, prom, 'increase(prober_create_event_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=100, pretty_name="prober_create_event_scenario_success"),
+            db, prom, 'increase(prober_create_event_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=0, pretty_name="prober_create_event_scenario_success"),
         TimeLimitIndicator(
             db, prom, "prober_create_event_scenario_duration_milliseconds", 100),
     ]
