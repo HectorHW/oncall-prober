@@ -196,7 +196,7 @@ def main():
         FallibleActionIndicator(
             db, prom, 'prober_create_team_scenario_total{status="fail"}', 0, operator.gt, missing_value=100, pretty_name="prober_create_team_scenario_success"),
         TimeLimitIndicator(
-            db, prom, "prober_create_team_scenario_duration_milliseconds", 100),
+            db, prom, "prober_create_team_scenario_duration_milliseconds", 200),
 
         FallibleActionIndicator(
             db, prom, 'prober_create_event_scenario_total{status="fail"}', 0, operator.gt, missing_value=100, pretty_name="prober_create_event_scenario_success"),
