@@ -27,6 +27,7 @@ class Config(object):
     mysql_user = env("MYSQL_USER", 'root')
     mysql_password = env("MYSQL_PASS", '1234')
     mysql_db_name = env("MYSQL_DB_NAME", 'sla')
+    mock_db = env.bool("MOCK_DB", False)
 
 
 class Mysql:
@@ -152,12 +153,13 @@ class TimeLimitIndicator(Indicator):
                  prom: PrometheusRequest,
                  value_name: str,
                  limit: int,
-                 pretty_name: str = None) -> None:
+                 pretty_name: str = None, missing_value: int = 2000) -> None:
         self.db = db
         self.prom = prom
         self.value_name = value_name
         self.limit = limit
         self.pretty_name = pretty_name or self.value_name
+        self.missing_value = missing_value
 
     def record(self, timestamp: float):
         unixtimestamp = int(timestamp)
@@ -165,7 +167,7 @@ class TimeLimitIndicator(Indicator):
             unixtimestamp).strftime('%Y-%m-%d %H:%M:%S')
         value = self.prom.lastValue(
             self.value_name,
-            unixtimestamp, 2 * 1000
+            unixtimestamp, self.missing_value
         )
         value = float(value)
         self.db.save_indicator(
@@ -181,7 +183,10 @@ def main():
     config = Config()
     setup_logging(config)
     # you may want to use MysqlMock for debugging
-    db = Mysql(config)
+    if config.mock_db:
+        db = MysqlMock(config)
+    else:
+        db = Mysql(config)
     prom = PrometheusRequest(config)
 
     logging.info(f"Starting sla checker")
@@ -189,9 +194,9 @@ def main():
     indicators = [
 
         FallibleActionIndicator(
-            db, prom, 'probe_http_status_code{job="blackbox", instance="localhost:8080"}', 200, operator.ne, "prober_load_frontpage_scenario_success"),
+            db, prom, 'increase(prober_load_frontpage_scenario_total{status="fail"}[1m])', 0, operator.gt, pretty_name="prober_load_frontpage_scenario_success", missing_value=100),
         TimeLimitIndicator(
-            db, prom, 'sum (probe_http_duration_seconds{job="blackbox", instance="localhost:8080"}) * 1000', 100, "prober_load_frontpage_scenario_duration_milliseconds"
+            db, prom, 'prober_load_frontpage_scenario_duration_milliseconds', 2000, missing_value=10000
         ),
 
         FallibleActionIndicator(
