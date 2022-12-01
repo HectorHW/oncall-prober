@@ -11,8 +11,7 @@ import requests
 import posixpath
 import datetime
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+from selenium.webdriver.chromium.options import ChromiumOptions
 
 prometheus_client.REGISTRY.unregister(prometheus_client.GC_COLLECTOR)
 prometheus_client.REGISTRY.unregister(prometheus_client.PLATFORM_COLLECTOR)
@@ -269,15 +268,12 @@ class FrontpageLoadProbe(ProbeScenario):
         super().__init__(status_counter, test_time_ms)
         self.url = url
 
-        options = Options()
-        options.headless = True
+        options = ChromiumOptions()
 
-        options.set_preference("browser.cache.disk.enable", False)
-        options.set_preference("browser.cache.memory.enable", False)
-        options.set_preference("browser.cache.offline.enable", False)
-        options.set_preference("network.http.use-cache", False)
+        options.add_argument("--headless")
+        options.add_argument("--disable-application-cache")
 
-        self.driver = webdriver.Firefox(options=options)
+        self.driver = webdriver.Chrome(options=options)
         self.driver.get("about:blank")
 
     def on_test(self) -> bool:
