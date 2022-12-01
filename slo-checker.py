@@ -191,7 +191,7 @@ def main():
         FallibleActionIndicator(
             db, prom, 'probe_http_status_code{job="blackbox", instance="localhost:8080"}', 200, operator.ne, "prober_load_frontpage_scenario_success"),
         TimeLimitIndicator(
-            db, prom, 'sum (probe_http_duration_seconds{job="blackbox", instance="localhost:8080"}) * 1000', 200, "prober_load_frontpage_scenario_duration_milliseconds"
+            db, prom, 'sum (probe_http_duration_seconds{job="blackbox", instance="localhost:8080"}) * 1000', 100, "prober_load_frontpage_scenario_duration_milliseconds"
         ),
 
         FallibleActionIndicator(
