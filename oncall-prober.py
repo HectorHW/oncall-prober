@@ -3,12 +3,16 @@ import logging
 import signal
 import sys
 import time
+from typing import List
 from environs import Env
 import prometheus_client
 from prometheus_client import start_http_server, Counter, Gauge
 import requests
 import posixpath
 import datetime
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 prometheus_client.REGISTRY.unregister(prometheus_client.GC_COLLECTOR)
 prometheus_client.REGISTRY.unregister(prometheus_client.PLATFORM_COLLECTOR)
@@ -81,6 +85,16 @@ PROBER_CREATE_EVENT_SCENARIO_TOTAL = Counter(
 PROBER_CREATE_EVENT_SCENARIO_DURATION_MILLISECONDS = Gauge(
     "prober_create_event_scenario_duration_milliseconds",
     "Duration in miliseconds of create event scenario for oncall API"
+)
+
+PROBER_LOAD_FRONTPAGE_SCENARIO_TOTAL = Counter(
+    "prober_load_frontpage_scenario_total",
+    "Total number of runs of load frontpage scenario for oncall by status",
+    ["status"]
+)
+PROBER_LOAD_FRONTPAGE_SCENARIO_DURATION_MILLISECONDS = Gauge(
+    "prober_load_frontpage_scenario_duration_milliseconds",
+    "Duration in miliseconds of load frontpage scenario for oncall"
 )
 
 
@@ -250,38 +264,66 @@ class EventCreationProbe(ProbeScenario):
         return response.status_code == 201
 
 
-def run_probes(api: OncallApi):
+class FrontpageLoadProbe(ProbeScenario):
+    def __init__(self, status_counter: Counter, test_time_ms: Gauge, url: str) -> None:
+        super().__init__(status_counter, test_time_ms)
+        self.url = url
+
+        options = Options()
+        options.headless = True
+
+        options.set_preference("browser.cache.disk.enable", False)
+        options.set_preference("browser.cache.memory.enable", False)
+        options.set_preference("browser.cache.offline.enable", False)
+        options.set_preference("network.http.use-cache", False)
+
+        self.driver = webdriver.Firefox(options=options)
+        self.driver.get("about:blank")
+
+    def on_test(self) -> bool:
+        self.driver.get(self.url)
+        result = "Oncall" in self.driver.page_source
+        self.driver.get("about:blank")
+        return result
+
+
+def init_probes(api: OncallApi, config: Config) -> List[ProbeScenario]:
     test_user = "test_prober_user"
     test_team = "test_prober_team"
-    UserCreationProbe(
+
+    return [UserCreationProbe(
         PROBER_CREATE_USER_SCENARIO_TOTAL,
         PROBER_CREATE_USER_SCENARIO_DURATION_MILLISECONDS,
         api, test_user
-    ).run()
-
-    TeamCreationProbe(
+    ),
+        TeamCreationProbe(
         PROBER_CREATE_TEAM_SCENARIO_TOTAL,
         PROBER_CREATE_TEAM_SCENARIO_DURATION_MILLISECONDS,
         api, test_user, test_team
-    ).run()
-
-    EventCreationProbe(
+    ),
+        EventCreationProbe(
         PROBER_CREATE_EVENT_SCENARIO_TOTAL,
         PROBER_CREATE_EVENT_SCENARIO_DURATION_MILLISECONDS,
         api, test_user, test_team
-    ).run()
+    ),
 
-    TeamDeletionProbe(
+        TeamDeletionProbe(
         PROBER_DELETE_TEAM_SCENARIO_TOTAL,
         PROBER_DELETE_TEAM_SCENARIO_DURATION_MILLISECONDS,
         api, test_team
-    ).run()
-
-    UserDeletionProbe(
+    ),
+        UserDeletionProbe(
         PROBER_DELETE_USER_SCENARIO_TOTAL,
         PROBER_DELETE_USER_SCENARIO_DURATION_MILLISECONDS,
         api, test_user
-    ).run()
+    ),
+
+        FrontpageLoadProbe(
+        PROBER_LOAD_FRONTPAGE_SCENARIO_TOTAL,
+        PROBER_LOAD_FRONTPAGE_SCENARIO_DURATION_MILLISECONDS,
+        config.oncall_prober_base_url
+    )
+    ]
 
 
 def setup_logging(config: Config):
@@ -302,10 +344,13 @@ def main():
 
     api = OncallApi(config)
 
+    probes = init_probes(api, config)
+
     while True:
         logging.debug("running prober")
 
-        run_probes(api)
+        for probe in probes:
+            probe.run()
 
         logging.debug(
             f"waiting {config.oncall_prober_scrape_interval} seconds for next iteration")
