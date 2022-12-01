@@ -134,7 +134,7 @@ class FallibleActionIndicator(Indicator):
         date_format = datetime.utcfromtimestamp(
             unixtimestamp).strftime('%Y-%m-%d %H:%M:%S')
         value = self.prom.lastValue(
-            'increase(%s[1m])' % (self.value_name),
+            self.value_name,
             unixtimestamp, self.missing_value
         )
         value = int(float(value))
@@ -187,19 +187,26 @@ def main():
     logging.info(f"Starting sla checker")
 
     indicators = [
+
         FallibleActionIndicator(
-            db, prom, 'prober_create_user_scenario_total{status="fail"}', 0, operator.gt, missing_value=100,
+            db, prom, 'probe_http_status_code{job="blackbox", instance="localhost:8080"}', 200, operator.ne, "prober_load_frontpage_scenario_success"),
+        TimeLimitIndicator(
+            db, prom, 'sum (probe_http_duration_seconds{job="blackbox", instance="localhost:8080"}) * 1000', 200, "prober_load_frontpage_scenario_duration_milliseconds"
+        ),
+
+        FallibleActionIndicator(
+            db, prom, 'increase(prober_create_user_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=100,
             pretty_name="prober_create_user_scenario_success"),
         TimeLimitIndicator(
             db, prom, "prober_create_user_scenario_duration_milliseconds", 100),
 
         FallibleActionIndicator(
-            db, prom, 'prober_create_team_scenario_total{status="fail"}', 0, operator.gt, missing_value=100, pretty_name="prober_create_team_scenario_success"),
+            db, prom, 'increase(prober_create_team_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=100, pretty_name="prober_create_team_scenario_success"),
         TimeLimitIndicator(
             db, prom, "prober_create_team_scenario_duration_milliseconds", 200),
 
         FallibleActionIndicator(
-            db, prom, 'prober_create_event_scenario_total{status="fail"}', 0, operator.gt, missing_value=100, pretty_name="prober_create_event_scenario_success"),
+            db, prom, 'increase(prober_create_event_scenario_total{status="fail"}[1m])', 0, operator.gt, missing_value=100, pretty_name="prober_create_event_scenario_success"),
         TimeLimitIndicator(
             db, prom, "prober_create_event_scenario_duration_milliseconds", 100),
     ]
