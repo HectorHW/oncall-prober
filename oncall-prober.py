@@ -268,19 +268,25 @@ class FrontpageLoadProbe(ProbeScenario):
         super().__init__(status_counter, test_time_ms)
         self.url = url
 
-        options = ChromiumOptions()
+        self.options = ChromiumOptions()
 
-        options.add_argument("--headless")
-        options.add_argument("--disable-application-cache")
-
-        self.driver = webdriver.Chrome(options=options)
-        self.driver.get("about:blank")
+        self.options.add_argument("--headless")
+        self.options.add_argument("--disable-application-cache")
+        self.driver = None
 
     def on_test(self) -> bool:
         self.driver.get(self.url)
         result = "Oncall" in self.driver.page_source
         self.driver.get("about:blank")
         return result
+
+    def run(self) -> bool:
+        try:
+            self.driver = webdriver.Chrome(options=self.options)
+            self.driver.get("about:blank")
+            return super().run()
+        finally:
+            self.driver.quit()
 
 
 def init_probes(api: OncallApi, config: Config) -> List[ProbeScenario]:
